@@ -18,26 +18,44 @@ $file_handle = null;
 $split_data = null;
 $message = array();
 $message_array = array();
+$success_message = null;
+$error_message = array();
+$clean = array();
 
 
-if( !empty($_POST['btn_submit'])){
-    if( $file_handle = fopen( FILENAME, "a")){
-        //ファイルを無事に開くことができると、$file_handleに「ファイルポインターリソース」と呼ばれるファイルへのアクセス情報が代入されます。
-        // ファイルからデータを読み込んだり書き込むときに、このポインターリソースが必ず必要になります。
-        // もしファイルを開くことができなかった場合は$file_handleにfalseが代入され、if文の中は実行されません。if文の中にあるfclose関数はファイルを安全に閉じるための関数です。
-        // こちらの関数はfopen関数とセットで使用し、先ほど取得したファイルポインターリソースを渡して閉じるファイルを特定します。ここまででファイルを開いて、閉じることができるようになりました。
-        
-        // 書き込み日時を取得
-        $now_date = date("Y-m-d H:i:s");
-        // 書き込むデータを作成
-        $data = "'". $_POST['view_name']. "','". $_POST['message']. "','". $now_date. "'\n";
-        // 書き込み
-        fwrite($file_handle, $data);
-        // ファイルを閉じる
-        fclose( $file_handle);
+if( !empty($_POST['btn_submit']) ) {
+    // 表示名の入力チェック：バリデーションを実装
+    if( empty($_POST['view_name']) ) {
+        $error_message[] = '表示名を入力してください。';
+    } else {
+        $clean['view_name'] = htmlspecialchars( $_POST['view_name'], ENT_QUOTES);
+    }
+
+    if( empty($_POST['message']) ) {
+        $error_message[] = 'ひと言メッセージを入力してください';
+    } else {
+        $clean['message'] = htmlspecialchars( $_POST['message'], ENT_QUOTES);
+        $clean['message'] = preg_replace( '/\\r\\n|\\n|\\r/', '<br>', $clean['message']);
+    }
+    if( empty($error_message) ) {
+        if( $file_handle = fopen( FILENAME, "a") ) {
+            //ファイルを無事に開くことができると、$file_handleに「ファイルポインターリソース」と呼ばれるファイルへのアクセス情報が代入されます。
+            // ファイルからデータを読み込んだり書き込むときに、このポインターリソースが必ず必要になります。
+            // もしファイルを開くことができなかった場合は$file_handleにfalseが代入され、if文の中は実行されません。if文の中にあるfclose関数はファイルを安全に閉じるための関数です。
+            // こちらの関数はfopen関数とセットで使用し、先ほど取得したファイルポインターリソースを渡して閉じるファイルを特定します。ここまででファイルを開いて、閉じることができるようになりました。
+            
+            // 書き込み日時を取得
+            $now_date = date("Y-m-d H:i:s");
+            // 書き込むデータを作成
+            $data = "'". $clean['view_name']. "','". $clean['message']. "','". $now_date. "'\n";
+            // 書き込み
+            fwrite($file_handle, $data);
+            // ファイルを閉じる
+            fclose( $file_handle);
+            $success_message = 'メッセージを書き込みました。';
+        }
     }
 }
-
 if($file_handle = fopen(FILENAME, 'r')){
     while($data = fgets($file_handle)){
         $split_data = preg_split('/\'/', $data);
@@ -45,7 +63,7 @@ if($file_handle = fopen(FILENAME, 'r')){
         $message = array(
             'view_name' => $split_data[1],
             'message' => $split_data[3],
-            'post_data' => $split_data[5]
+            'post_date' => $split_data[5]
         );
         array_unshift($message_array, $message);
     }
@@ -332,8 +350,18 @@ article.reply::before {
 </head>
 <body>
 <h1>ひと言掲示板</h1>
+<?php if( !empty($success_message) ): ?>
+    <p class="success_message"><?php echo $success_message; ?></p>
+<?php endif; ?>
+<?php if( !empty($error_message) ): ?>
+    <ul class="error_message">
+        <?php foreach( $error_message as $value ): ?>
+            <li>・<?php echo $value; ?></li>
+        <?php endforeach; ?>
+    </ul>
+<?php endif; ?>
 <!-- ここにメッセージの入力フォームを設置 -->
-<form action="" method="POST">
+<form method="post">
 <!-- <label> を <input> 要素と関連付けると、いくらかの利点が発生 -->
 <!-- <label> を <input> 要素に関連付けるには、 <input> に id 属性を設定しなければなりません。そして <label> に for 属性を設定して、値を input の id と同じにします -->
     <div>
@@ -352,8 +380,8 @@ article.reply::before {
 <hr>
 <section>
 <!-- ここに投稿されたメッセージを表示 -->
-<?php if( !empty($message_array)): ?>
-<?php foreach($message_array as $value): ?>
+<?php if( !empty($message_array) ){ ?>
+<?php foreach( $message_array as $value ){ ?>
 <article>
     <div class="info">
         <h2><?php echo $value['view_name']; ?></h2>
@@ -361,8 +389,8 @@ article.reply::before {
     </div>
     <p><?php echo $value['message']; ?></p>
 </article>
-<?php endforeach; ?>
-<?php endif; ?>
+<?php } ?>
+<?php } ?>
 </section>
 </body>
 </html>
