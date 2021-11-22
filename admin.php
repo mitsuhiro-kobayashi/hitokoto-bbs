@@ -4,6 +4,9 @@
 // 定数名は通常の変数と見分けやすいように、アルファベットの大文字で指定する慣習があります
 // define( 'FILENAME', './message.txt');
 
+// 管理ページのログインパスワード
+define( 'PASSWORD', 'adminPassword');
+
 // データベース接続情報追記
 define( 'DB_HOST', 'localhost');
 define( 'DB_USER', 'root');
@@ -30,91 +33,12 @@ session_start();
 
 
 if( !empty($_POST['btn_submit']) ) {
-    // 表示名の入力チェック：バリデーションを実装
-    if( empty($_POST['view_name']) ) {
-        $error_message[] = '表示名を入力してください。';
+    if( !empty($_POST['admin_password']) && $_POST['admin_password'] === PASSWORD ) {
+        $_SESSION['admin_login'] =true;
     } else {
-        $clean['view_name'] = htmlspecialchars( $_POST['view_name'], ENT_QUOTES);
-
-        // セッションに表示名を保存
-        $_SESSION['view_name'] = $clean['view_name'];
-    }
-
-    if( empty($_POST['message']) ) {
-        $error_message[] = 'ひと言メッセージを入力してください';
-    } else {
-        $clean['message'] = htmlspecialchars( $_POST['message'], ENT_QUOTES);
-        $clean['message'] = preg_replace( '/\\r\\n|\\n|\\r/', '<br>', $clean['message']);
-    }
-    if( empty($error_message) ) {
-
-        /*
-        if( $file_handle = fopen( FILENAME, "a") ) {
-            //ファイルを無事に開くことができると、$file_handleに「ファイルポインターリソース」と呼ばれるファイルへのアクセス情報が代入されます。
-            // ファイルからデータを読み込んだり書き込むときに、このポインターリソースが必ず必要になります。
-            // もしファイルを開くことができなかった場合は$file_handleにfalseが代入され、if文の中は実行されません。if文の中にあるfclose関数はファイルを安全に閉じるための関数です。
-            // こちらの関数はfopen関数とセットで使用し、先ほど取得したファイルポインターリソースを渡して閉じるファイルを特定します。ここまででファイルを開いて、閉じることができるようになりました。
-            
-            // 書き込み日時を取得
-            $now_date = date("Y-m-d H:i:s");
-            // 書き込むデータを作成
-            $data = "'". $clean['view_name']. "','". $clean['message']. "','". $now_date. "'\n";
-            // 書き込み
-            fwrite($file_handle, $data);
-            // ファイルを閉じる
-            fclose( $file_handle);
-            $success_message = 'メッセージを書き込みました。';
-        }
-        */
-
-        // データベースに接続
-        $mysqli = new mysqli ( DB_HOST, DB_USER, '', DB_NAME);
-        /* mysqliクラスのオブジェクトには、データベースへの接続情報として「ホスト名」「ユーザー名」「パスワード」「データベース名」を順に指定します。
-        それぞれの情報は環境によって異なりますが、最後の「データベース名」については前回作成したデータベースを使用するので「board」を指定してください
-        */
-
-        // 接続エラーの確認
-        if( $mysqli->connect_errno ) {
-            $error_message[] = '書き込みに失敗しました。　エラー番号　' . $mysqli->connect_errno.' ： '. $mysqli->connect_error;
-        } else {
-            //　文字コード設定
-            $mysqli->set_charset('utf8');
-
-            // 書き込み日時を取得
-            $now_date = date("Y-m-d H:i:s");
-
-            // データを登録するsql作成
-            $sql = "INSERT INTO message (view_name, message, post_date) VALUES ( '$clean[view_name]','$clean[message]','$now_date')";
-
-            // データを登録
-            $res = $mysqli->query($sql);
-
-            if( $res ) {
-                $success_message = 'メッセージを書き込みました。';
-            } else {
-                $error_message[] = '書き込みに失敗しました。';
-            }
-            // データベースの接続を閉じる
-            $mysqli->close();
-        }
+        $error_message[] = 'ログインに失敗しました。';
     }
 }
-/*
-if($file_handle = fopen(FILENAME, 'r')){
-    while($data = fgets($file_handle)){
-        $split_data = preg_split('/\'/', $data);
-
-        $message = array(
-            'view_name' => $split_data[1],
-            'message' => $split_data[3],
-            'post_date' => $split_data[5]
-        );
-        array_unshift($message_array, $message);
-    }
-    // ファイルを閉じる
-    fclose($file_handle);
-}
-*/
 
     // データベースに接続
     $mysqli = new mysqli( DB_HOST, DB_USER, '', DB_NAME);
@@ -138,7 +62,7 @@ if($file_handle = fopen(FILENAME, 'r')){
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<title>ひと言掲示板</title>
+<title>ひと言掲示板 管理ページ</title>
 <style>
 
 /*------------------------------
@@ -281,6 +205,7 @@ label {
 }
 
 input[type="text"],
+input[type="password"],
 textarea {
 	margin-bottom: 20px;
 	padding: 10px;
@@ -290,7 +215,8 @@ textarea {
     background: #fff;
 }
 
-input[type="text"] {
+input[type="text"],
+input[type="password"] {
 	width: 200px;
 }
 textarea {
@@ -409,10 +335,8 @@ article.reply::before {
 </style>
 </head>
 <body>
-<h1>ひと言掲示板</h1>
-<?php if( !empty($success_message) ): ?>
-    <p class="success_message"><?php echo $success_message; ?></p>
-<?php endif; ?>
+<h1>ひと言掲示板 管理ページ</h1>
+
 <?php if( !empty($error_message) ): ?>
     <ul class="error_message">
         <?php foreach( $error_message as $value ): ?>
@@ -420,25 +344,14 @@ article.reply::before {
         <?php endforeach; ?>
     </ul>
 <?php endif; ?>
-<!-- ここにメッセージの入力フォームを設置 -->
-<form method="post">
-<!-- <label> を <input> 要素と関連付けると、いくらかの利点が発生 -->
-<!-- <label> を <input> 要素に関連付けるには、 <input> に id 属性を設定しなければなりません。そして <label> に for 属性を設定して、値を input の id と同じにします -->
-    <div>
-        <label for="view_name">表示名</label>
-        <input id="view_name" type="text" name="view_name" value="<?php if( !empty($_SESSION['view_name']) ){ echo $_SESSION['view_name']; } ?>">
-    </div>
-    <div>
-        <label for="message" name="message">ひと言メッセージ</label>
-        <textarea id="message" name="message"></textarea>
-        <!-- textarea要素でもPHPで入力データを判別するためのname属性 -->
-    </div>
-    <input type="submit" name="btn_submit" value="書き込む">
-</label>
 
-</form>
-<hr>
 <section>
+<?php if( !empty($_SESSION['admin_login']) && $_SESSION['admin_login'] === true ): ?>
+
+<!-- 管理ページの「admin.php」に「download.php」を呼び出すためのボタンを設置 -->
+<form method="get" action="./download.php">
+    <input type="submit" name="btn_download" value="ダウンロード">
+</form>
 <!-- ここに投稿されたメッセージを表示 -->
 <?php if( !empty($message_array) ){ ?>
 <?php foreach( $message_array as $value ){ ?>
@@ -451,6 +364,18 @@ article.reply::before {
 </article>
 <?php } ?>
 <?php } ?>
+
+<?php else: ?>
+<!-- ここにログインフォームがはいる -->
+<form method="post">
+    <div>
+        <label for="admin_password">ログインパスワード</label>
+        <input id="admin_password" type="password" name="admin_password" value="">
+    </div>
+    <input id="admin_password" type="submit" name="btn_submit" value="ログイン">
+</form>
+
+<?php endif; ?>
 </section>
 </body>
 </html>
